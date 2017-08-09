@@ -28,8 +28,7 @@ public class Client extends AsyncTask<Void, Void, Void> {
             socket = new Socket(address, port);
             Log.d("console","connected");
 
-            ByteArrayOutputStream byteArrayOutputStream =
-                    new ByteArrayOutputStream(64);
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(64);
             byte[] buffer = new byte[64];
 
             int bytesRead;
@@ -41,7 +40,10 @@ public class Client extends AsyncTask<Void, Void, Void> {
      */
             while ((bytesRead = inputStream.read(buffer)) != -1){
                 byteArrayOutputStream.write(buffer, 0, bytesRead);
-                response += byteArrayOutputStream.toString("UTF-8");
+                Log.d("console","bytearray " + byteArrayOutputStream);
+                response = byteArrayOutputStream.toString("UTF-8");
+                Log.d("console","received " + response);
+                Log.d("console",""+bytesRead);
             }
 
         } catch (UnknownHostException e) {
@@ -52,7 +54,12 @@ public class Client extends AsyncTask<Void, Void, Void> {
             // TODO Auto-generated catch block
             e.printStackTrace();
             response = "IOException: " + e.toString();
-        }finally{
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            response = "Exception: " + e.toString();
+        }
+        finally{
             if(socket != null){
                 try {
                     socket.close();
