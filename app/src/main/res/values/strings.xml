@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">GameWithFriends - client</string>
+    <string name="app_name">GameWithFriends - joinGame</string>
     <string name="join_game">Join game</string>
     <string name="Name">Name</string>
 
