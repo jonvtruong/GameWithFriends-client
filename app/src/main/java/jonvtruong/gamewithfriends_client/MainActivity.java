@@ -16,6 +16,7 @@ import java.net.UnknownHostException;
 public class MainActivity extends AppCompatActivity {
     static String HOST = "192.168.1.108";
     static int PORT = 8888;
+    static String name;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,33 +30,28 @@ public class MainActivity extends AppCompatActivity {
     public void join(View view) {
         Log.d("console","joining...");
         EditText editText = (EditText) findViewById(R.id.editText);
-        String name = editText.getText().toString().replaceAll("\\s",""); // gets the name entered from editText and removes any spaces
-        JoinGame j = new JoinGame(HOST,PORT,name);
+        name = editText.getText().toString().replaceAll("\\s",""); // gets the name entered from editText and removes any spaces
+        JoinGame j = new JoinGame(this);
         j.execute();
-        Intent intent = new Intent(this, GameActivity.class);
-        startActivity(intent);
     }
+
 
     /** Asynchronous task to connect to game server, set up player, and start game **/
     private class JoinGame extends AsyncTask<Void, Void, Void> {
-        String address;
-        int port;
+        MainActivity act;
 
-        String name;
-        Socket socket = null;
-
-        JoinGame(String addr, int p, String n){
-            address = addr;
-            port = p;
-            name = n;
+        JoinGame(MainActivity a){
+            act = a;
         }
 
         @Override
         protected Void doInBackground(Void... arg0) {
             try {
-                Log.d("console","trying to connect " + address + ":" + port);
-                socket = new Socket(address, port);
-                Protocol.setSocket(socket);
+                Log.d("console","trying to connect " + HOST + ":" + PORT);
+                Socket socket = new Socket(HOST, PORT);
+                GameVariables vars = ((GameVariables) getApplicationContext());
+
+                vars.setSocket(socket);
 
                 Log.d("console", "connected");
 
@@ -64,9 +60,10 @@ public class MainActivity extends AppCompatActivity {
 
                 String message = Protocol.receive(inputStream); // reading player number and account
                 Log.d("console", message);
-                Protocol.gameProtocol(message); // update client variables with number and account
+                Protocol.gameProtocol(message, vars); // process the message update client variables with number and account
 
                 Protocol.send(outputStream, "n " + name); // sending name
+                vars.setName(name);
 
             } catch (UnknownHostException e) {
                 // TODO Auto-generated catch block
@@ -78,7 +75,14 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("console", "Exception: " + e.toString());
             }
 
-            return null;
+            return null; // sends this variable into the argument of onPostExecute
+        }
+
+        @Override
+        protected void onPostExecute(Void result){ //creates a new activity to run the game
+            Intent intent = new Intent(act, GameActivity.class);
+            startActivity(intent);
+            Log.d("console","create new activity");
         }
     }
 }

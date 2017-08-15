@@ -1,6 +1,16 @@
 <resources>
-    <string name="app_name">GameWithFriends - joinGame</string>
+    <string name="app_name">GameWithFriends</string>
     <string name="join_game">Join game</string>
     <string name="Name">Name</string>
-
+    <string name="Player">Player: </string>
+    <string-array name="planets_array">
+        <item>Mercury</item>
+        <item>Venus</item>
+        <item>Earth</item>
+        <item>Mars</item>
+        <item>Jupiter</item>
+        <item>Saturn</item>
+        <item>Uranus</item>
+        <item>Neptune</item>
+    </string-array>
 </resources>
