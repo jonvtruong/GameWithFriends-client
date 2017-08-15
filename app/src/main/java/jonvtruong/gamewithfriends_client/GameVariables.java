@@ -13,6 +13,7 @@ public class GameVariables extends Application {
     private String name;
     private int account;
     private int playerNum;
+    private String[] nameList = {"asdsad", "asjkhjhkjsad"};
 
     public void setName(String n){
         name = n;
@@ -44,5 +45,13 @@ public class GameVariables extends Application {
 
     public int getPlayerNum(){
         return playerNum;
+    }
+
+    public void setNameList(String[] list){
+        nameList = list;
+    }
+
+    public String[] getNameList(){
+        return nameList;
     }
 }

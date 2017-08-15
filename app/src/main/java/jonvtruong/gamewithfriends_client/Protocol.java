@@ -7,29 +7,38 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 
 class Protocol{
-    private static final int BUFFER_SIZE = 64;
+    private static final int BUFFER_SIZE = 128;
 
     /** messages will be in the format: a 200 = total account value 200 **/
-    static void gameProtocol(String m, GameVariables vars){
+    static String gameProtocol(String m, GameVariables vars){
         String[] parse = m.split(" ");
         String command = parse[0];
         Log.d("console", "command: " + command);
 
-        if(command.equals("n")) { //if creating new player, update player number and account starting balance
-            int playerNum = Integer.parseInt(parse[1]);
-            int account = Integer.parseInt(parse[2]);
+        switch(command) {
+            case("n"): //if creating new player, update player number and account starting balance
+                int playerNum = Integer.parseInt(parse[1]);
+                int account = Integer.parseInt(parse[2]);
 
-            vars.setPlayerNum(playerNum);
-            vars.setAccount(account);
-            Log.d("console", "Player number: " + playerNum + " account balance: " + account);
+                vars.setPlayerNum(playerNum);
+                vars.setAccount(account);
+                Log.d("console", "Player number: " + playerNum + " account balance: " + account);
+
+            case("a"):
+                vars.setAccount(Integer.parseInt(parse[1]));
+                Log.d("console", "account updated: " + vars.getAccount());
+
+            case("p"):
+                parse = Arrays.copyOfRange(parse, 1, parse.length);
+                vars.setNameList(parse);
+
+                Log.d("console", "player list updated: " + vars.getNameList().length);
         }
 
-        else if(command.equals("a")) {
-            vars.setAccount(Integer.parseInt(parse[1]));
-            Log.d("console","account updated: " + vars.getAccount());
-        }
+        return command;
     }
 
     /**reads from the input stream and stores it as a byte array.
