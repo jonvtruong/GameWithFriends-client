@@ -3,6 +3,7 @@ package jonvtruong.gamewithfriends_client;
 import android.app.Application;
 
 import java.net.Socket;
+import java.util.HashMap;
 
 /**
  * Created by jonvt on 8/14/2017.
@@ -13,7 +14,7 @@ public class GameVariables extends Application {
     private String name;
     private int account;
     private int playerNum;
-    private String[] nameList = {"asdsad", "asjkhjhkjsad"};
+    private HashMap<String,Integer> nameList = null;
 
     public void setName(String n){
         name = n;
@@ -47,11 +48,11 @@ public class GameVariables extends Application {
         return playerNum;
     }
 
-    public void setNameList(String[] list){
+    public void setNameList(HashMap<String,Integer> list){
         nameList = list;
     }
 
-    public String[] getNameList(){
+    public HashMap getNameList(){
         return nameList;
     }
 }

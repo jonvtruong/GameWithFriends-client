@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
+import java.util.HashMap;
 
 class Protocol{
     private static final int BUFFER_SIZE = 128;
@@ -16,7 +17,7 @@ class Protocol{
     static String gameProtocol(String m, GameVariables vars){
         String[] parse = m.split(" ");
         String command = parse[0];
-        Log.d("console", "command: " + command);
+        Log.d("console", "received command: " + command);
 
         switch(command) {
             case("n"): //if creating new player, update player number and account starting balance
@@ -25,17 +26,23 @@ class Protocol{
 
                 vars.setPlayerNum(playerNum);
                 vars.setAccount(account);
-                Log.d("console", "Player number: " + playerNum + " account balance: " + account);
+                Log.d("console", "setting up Player number: " + playerNum + " account balance: " + account);
+                break;
 
             case("a"):
                 vars.setAccount(Integer.parseInt(parse[1]));
                 Log.d("console", "account updated: " + vars.getAccount());
 
             case("p"):
-                parse = Arrays.copyOfRange(parse, 1, parse.length);
-                vars.setNameList(parse);
+                HashMap<String,Integer> list = new HashMap<>();
+                for (int i=1; i<parse.length; i++){
+                    list.put(parse[i], i - 1);
+                }
 
-                Log.d("console", "player list updated: " + vars.getNameList().length);
+                vars.setNameList(list);
+
+                Log.d("console", "player list updated: " + vars.getNameList());
+                break;
         }
 
         return command;
@@ -64,6 +71,7 @@ class Protocol{
         try {
             byte[] bytes = message.getBytes("UTF-8");
             conn.write(bytes);
+            Log.d("console", "sending: " + message);
         }
 
         catch (UnsupportedEncodingException e){

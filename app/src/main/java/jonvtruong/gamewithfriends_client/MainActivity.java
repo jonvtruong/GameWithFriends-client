@@ -59,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
                 OutputStream outputStream = socket.getOutputStream();
 
                 String message = Protocol.receive(inputStream); // reading player number and account
-                Log.d("console", message);
+                Log.d("console", "message received " + message);
                 Protocol.gameProtocol(message, vars); // process the message update client variables with number and account
 
                 Protocol.send(outputStream, "n " + name); // sending name
@@ -83,6 +83,7 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(act, GameActivity.class);
             startActivity(intent);
             Log.d("console","create new activity");
+            Log.d("console","--------------------");
         }
     }
 }
