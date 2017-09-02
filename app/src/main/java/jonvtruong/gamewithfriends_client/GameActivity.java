@@ -1,5 +1,7 @@
 package jonvtruong.gamewithfriends_client;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
@@ -27,6 +29,7 @@ public class GameActivity extends AppCompatActivity {
     private TextView accountText;
     private GameVariables vars;
     private int selectedPlayer;
+    private boolean confirmed;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,8 +81,14 @@ public class GameActivity extends AppCompatActivity {
         try {
             int payment = Integer.parseInt(editText.getText().toString()); // gets the name entered from editText and removes any spaces
             if(payment <= vars.getAccount()) {
-                SendPayment s = new SendPayment();
-                s.execute(selectedPlayer, payment);
+                //confirmation dialog
+                createDialog("Sending payment", "Is this correct?");
+                if(confirmed) {
+                    Log.d("console", "confirmed");
+                    SendPayment s = new SendPayment();
+                    s.execute(selectedPlayer, payment);
+                    confirmed = false;
+                }
             }
 
             else{
@@ -101,6 +110,31 @@ public class GameActivity extends AppCompatActivity {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
         Log.d("console", "updated spinner");
+    }
+
+    private void createDialog(String title, String msg){
+        // 1. Instantiate an AlertDialog.Builder with its constructor
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        // 2. Chain together various setter methods to set the dialog characteristics
+        builder.setMessage(msg)
+                .setTitle(title);
+
+        builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // User clicks yes
+                confirmed = true;
+            }
+        });
+        builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // user clicks no
+                confirmed = false;
+            }
+        });
+        // 3. Get the AlertDialog from create()
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     /** Asynchronous task to send payment **/
@@ -138,11 +172,9 @@ public class GameActivity extends AppCompatActivity {
 
     private class listenThread implements Runnable{
         private Socket socket;
-        private GameActivity act;
 
         listenThread(GameActivity g){
             socket = vars.getSocket();
-            act = g;
         }
 
         @Override
@@ -162,14 +194,9 @@ public class GameActivity extends AppCompatActivity {
                     }
 
                     Log.d("console", message);
-                    final String command = Protocol.gameProtocol(message, vars); // process the message
+                    String[] parse = Protocol.parseCommand(message); // get the parsed message
 
-                    handler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            updateUI(command);
-                        }
-                    });
+                    handler.post(new runCommand(parse));
 
                 } catch (UnknownHostException e) {
                     // TODO Auto-generated catch block
@@ -184,11 +211,43 @@ public class GameActivity extends AppCompatActivity {
                 }
             }
         }
+    }
 
-        private void updateUI(String command){
+    private class runCommand implements Runnable{
+        String[] parse;
+        String command;
+
+        runCommand(String[] p){
+            parse = p;
+            command = parse[0];
+        }
+
+        @Override
+        public void run() {
+            //get confirmation dialog for transactions (commands that are not new player added)
+            boolean needDialog = !(command.equals("p") || command.equals("n"));
+            if(needDialog) {
+                //show confirmation dialog
+                createDialog("Transaction received", "Is this correct?");
+            }
+
+            if(confirmed || !needDialog){
+                Log.d("console","dialog confirmed");
+                //execute command, update variables
+                Protocol.executeCommand(parse, vars);
+                //update UI with new variable
+                updateUI();
+            }
+
+        }
+
+        private void updateUI(){
             switch(command){
                 case "p": // processes command: p (list of player names)
                     updateSpinner();
+                    break;
+                case "t":
+                    updateAccountText();
                     break;
                 case "a": // receives command: a new_account_value
                     updateAccountText();

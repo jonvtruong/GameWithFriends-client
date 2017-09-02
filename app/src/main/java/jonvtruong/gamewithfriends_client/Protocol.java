@@ -14,10 +14,16 @@ class Protocol{
     private static final int BUFFER_SIZE = 128;
 
     /** messages will be in the format: a 200 = total account value 200 **/
-    static String gameProtocol(String m, GameVariables vars){
+    static String[] parseCommand(String m){
         String[] parse = m.split(" ");
+        Log.d("console", "received command: " + parse[0]);
+
+        return parse;
+    }
+
+    static void executeCommand(String[] p, GameVariables vars){
+        String[] parse = p;
         String command = parse[0];
-        Log.d("console", "received command: " + command);
 
         switch(command) {
             case("n"): //if creating new player, update player number and account starting balance
@@ -29,11 +35,11 @@ class Protocol{
                 Log.d("console", "setting up Player number: " + playerNum + " account balance: " + account);
                 break;
 
-            case("a"):
+            case("a"): //update personal account
                 vars.setAccount(Integer.parseInt(parse[1]));
                 Log.d("console", "account updated: " + vars.getAccount());
 
-            case("p"):
+            case("p"): //update player list
                 HashMap<String,Integer> list = new HashMap<>();
                 for (int i=1; i<parse.length; i++){
                     list.put(parse[i], i - 1);
@@ -44,8 +50,6 @@ class Protocol{
                 Log.d("console", "player list updated: " + vars.getNameList());
                 break;
         }
-
-        return command;
     }
 
     /**reads from the input stream and stores it as a byte array.

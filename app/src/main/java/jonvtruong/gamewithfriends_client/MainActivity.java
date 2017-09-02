@@ -60,7 +60,8 @@ public class MainActivity extends AppCompatActivity {
 
                 String message = Protocol.receive(inputStream); // reading player number and account
                 Log.d("console", "message received " + message);
-                Protocol.gameProtocol(message, vars); // process the message update client variables with number and account
+                String[] parse = Protocol.parseCommand(message);
+                Protocol.executeCommand(parse, vars); // process the message update client variables with number and account
 
                 Protocol.send(outputStream, "n " + name); // sending name
                 vars.setName(name);
