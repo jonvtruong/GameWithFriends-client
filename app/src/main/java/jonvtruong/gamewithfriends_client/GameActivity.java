@@ -29,7 +29,7 @@ public class GameActivity extends AppCompatActivity {
     private TextView accountText;
     private GameVariables vars;
     private int selectedPlayer;
-    private boolean confirmed;
+    private String nameSelected;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,7 +49,7 @@ public class GameActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
                 // An item was selected. You can retrieve the selected item using parent.getItemAtPosition(pos)
-                String nameSelected = (String) parent.getItemAtPosition(pos);
+                nameSelected = (String) parent.getItemAtPosition(pos);
                 Log.d("console","name selected: " + nameSelected);
                 HashMap dict = vars.getNameList();
                 selectedPlayer = (int) dict.get(nameSelected);
@@ -76,19 +76,12 @@ public class GameActivity extends AppCompatActivity {
      * Called when the user taps the Pay button
      */
     public void pay(View view) {
-        Log.d("console","paying");
         EditText editText = (EditText) findViewById(R.id.paymentText);
         try {
             int payment = Integer.parseInt(editText.getText().toString()); // gets the name entered from editText and removes any spaces
             if(payment <= vars.getAccount()) {
                 //confirmation dialog
-                createDialog("Sending payment", "Is this correct?");
-                if(confirmed) {
-                    Log.d("console", "confirmed");
-                    SendPayment s = new SendPayment();
-                    s.execute(selectedPlayer, payment);
-                    confirmed = false;
-                }
+                paymentDialog(payment);
             }
 
             else{
@@ -112,24 +105,27 @@ public class GameActivity extends AppCompatActivity {
         Log.d("console", "updated spinner");
     }
 
-    private void createDialog(String title, String msg){
+    private void paymentDialog(int p){
         // 1. Instantiate an AlertDialog.Builder with its constructor
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
         // 2. Chain together various setter methods to set the dialog characteristics
-        builder.setMessage(msg)
-                .setTitle(title);
+        builder.setMessage("Is this correct?")
+                .setTitle("Paying " + nameSelected + " $" + p);
 
         builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
-                // User clicks yes
-                confirmed = true;
+            // User clicks yes
+            Log.d("console", "confirmed, paying");
+            SendPayment s = new SendPayment();
+            s.execute(selectedPlayer, p);
             }
         });
+
         builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
                 // user clicks no
-                confirmed = false;
+
             }
         });
         // 3. Get the AlertDialog from create()
@@ -139,9 +135,6 @@ public class GameActivity extends AppCompatActivity {
 
     /** Asynchronous task to send payment **/
     private class SendPayment extends AsyncTask<Integer, Void, Void> {
-        SendPayment(){
-        }
-
         @Override
         protected Void doInBackground(Integer... arg) {
             try {
@@ -213,7 +206,7 @@ public class GameActivity extends AppCompatActivity {
         }
     }
 
-    private class runCommand implements Runnable{
+    private class runCommand implements Runnable{ //executes command in UI thread
         String[] parse;
         String command;
 
@@ -228,7 +221,7 @@ public class GameActivity extends AppCompatActivity {
             boolean needDialog = !(command.equals("p") || command.equals("n"));
             if(needDialog) {
                 //show confirmation dialog
-                createDialog("Transaction received", "Is this correct?");
+                createDialog("Transaction received", "Is this correct?",0);
             }
 
             if(confirmed || !needDialog){
