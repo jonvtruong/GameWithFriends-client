@@ -2,6 +2,8 @@ package jonvtruong.gamewithfriends_client;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.media.AudioManager;
+import android.media.SoundPool;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
@@ -30,11 +32,15 @@ public class GameActivity extends AppCompatActivity {
     private GameVariables vars;
     private int selectedPlayer;
     private String nameSelected;
+    private SoundPool soundPool;
+    private int upSound;
+    private boolean loaded;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
+        this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
         // create background thread to listen and process server messages
         handler = new Handler();
@@ -42,7 +48,6 @@ public class GameActivity extends AppCompatActivity {
         Thread listen = new Thread(new listenThread(this));
         listen.start();
 
-       // Intent intent = getIntent();
         spinner = (Spinner) findViewById(R.id.spinner);
 
         spinner.setOnItemSelectedListener(new Spinner.OnItemSelectedListener() { // called whenever player name is selected
@@ -69,7 +74,16 @@ public class GameActivity extends AppCompatActivity {
         accountText.setText(Integer.toString(vars.getAccount()));
         Log.d("console","setup accountText: " + vars.getAccount());
 
-        //updateSpinner();
+        // Load the sound
+        soundPool = new SoundPool(10, AudioManager.STREAM_MUSIC, 0);
+        soundPool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
+            @Override
+            public void onLoadComplete(SoundPool soundPool, int sampleId,
+                                       int status) {
+                loaded = true;
+            }
+        });
+        upSound = soundPool.load(GameActivity.this, R.raw.money_up, 1);
     }
 
     /**
@@ -78,7 +92,7 @@ public class GameActivity extends AppCompatActivity {
     public void pay(View view) {
         EditText editText = (EditText) findViewById(R.id.paymentText);
         try {
-            int payment = Integer.parseInt(editText.getText().toString()); // gets the name entered from editText and removes any spaces
+            int payment = Integer.parseInt(editText.getText().toString());
             if(payment <= vars.getAccount()) {
                 //confirmation dialog
                 paymentDialog(payment);
@@ -89,6 +103,20 @@ public class GameActivity extends AppCompatActivity {
                 toast.show();
             }
 
+        } catch(NumberFormatException e){
+            Log.d("console", "number too big");
+        }
+    }
+
+    /**
+     * Called when the user taps the Withdraw button
+     */
+    public void withdraw(View view) {
+        EditText editText = (EditText) findViewById(R.id.paymentText);
+        try {
+            int payment = Integer.parseInt(editText.getText().toString());
+            //confirmation dialog
+            withdrawDialog(payment);
         } catch(NumberFormatException e){
             Log.d("console", "number too big");
         }
@@ -117,7 +145,7 @@ public class GameActivity extends AppCompatActivity {
             public void onClick(DialogInterface dialog, int id) {
             // User clicks yes
             Log.d("console", "confirmed, paying");
-            SendPayment s = new SendPayment();
+            SendTransaction s = new SendTransaction();
             s.execute(selectedPlayer, pay);
             }
         });
@@ -133,12 +161,40 @@ public class GameActivity extends AppCompatActivity {
         dialog.show();
     }
 
+    private void withdrawDialog(int p){
+        // 1. Instantiate an AlertDialog.Builder with its constructor
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        final int pay = p;
+        // 2. Chain together various setter methods to set the dialog characteristics
+        builder.setMessage("Is this correct?")
+                .setTitle("Withdrawing $" + p + " from bank");
+
+        builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // User clicks yes
+                Log.d("console", "confirmed, withdrawing");
+                SendTransaction s = new SendTransaction();
+                s.execute(-1, -pay); // to player, amount
+            }
+        });
+
+        builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // user clicks no
+
+            }
+        });
+        // 3. Get the AlertDialog from create()
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
     /** Asynchronous task to send payment **/
-    private class SendPayment extends AsyncTask<Integer, Void, Void> {
+    private class SendTransaction extends AsyncTask<Integer, Void, Void> {
         @Override
         protected Void doInBackground(Integer... arg) {
             try {
-                Log.d("console","sending payment");
+                Log.d("console","sending transaction");
 
                 Socket socket = vars.getSocket();
                 OutputStream outputStream = socket.getOutputStream();
@@ -160,7 +216,7 @@ public class GameActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(Void result){ //displays toast message after payment is sent to server, runs on UI thread
-            Toast toast = Toast.makeText(GameActivity.this, "Payment sent", Toast.LENGTH_SHORT);
+            Toast toast = Toast.makeText(GameActivity.this, "Transaction sent", Toast.LENGTH_SHORT);
             toast.show();
         }
     }
@@ -220,11 +276,15 @@ public class GameActivity extends AppCompatActivity {
 
         @Override
         public void run() {
-            //get confirmation dialog for transactions (commands that are not new player added)
-            //boolean needDialog = !(command.equals("p") || command.equals("n"));
             if(command.equals("t")) {
                 //show confirmation dialog
-                receiveDialog();
+                if(Integer.parseInt(parse[3]) >= 0) { // if player to player transaction
+                    receiveDialog();
+                }
+
+                else{
+                    bankDialog();
+                }
             }
 
             else{
@@ -276,6 +336,45 @@ public class GameActivity extends AppCompatActivity {
             dialog.show();
         }
 
+        private void bankDialog(){
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(GameActivity.this);
+
+            int fromNum = Integer.parseInt(parse[1]);
+
+            HashMap<String,Integer> list = vars.getNameList();
+            String fromName ="";
+
+            for(String key: list.keySet()) {
+                if(list.get(key).equals(fromNum)) {
+                    fromName = key;
+                }
+            }
+
+            builder.setMessage("Do you approve?")
+                    .setTitle(fromName + " wants to withdraw from the bank $" + -Integer.parseInt(parse[3]));
+
+            builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    // User clicks yes
+                    message = message.replaceFirst("t","b");
+                    Log.d("console", "confirmed transaction: " + message);
+                    SendOK s = new SendOK();
+                    s.execute(message);
+                }
+            });
+
+            builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    // user clicks no
+
+                }
+            });
+            // 3. Get the AlertDialog from create()
+            AlertDialog dialog = builder.create();
+            dialog.show();
+        }
+
         private void updateUI(){
             switch(command){
                 case "p": // processes command: p (list of player names)
@@ -284,13 +383,22 @@ public class GameActivity extends AppCompatActivity {
 
                 case "a": // receives command: a new_account_value
                     updateAccountText();
-                    Log.d("console","displaying new account value");
+                    playEffect();
                     break;
             }
         }
 
         private void updateAccountText(){
             accountText.setText(Integer.toString(vars.getAccount()));
+        }
+
+        private void playEffect(){
+            AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+            // Is the sound loaded already?
+            if (loaded) {
+                soundPool.play(upSound, 1f, 1f, 1, 0, 1f);
+                Log.e("Test", "Played sound");
+            }
         }
 
         /** Asynchronous task to send transaction confirmation **/

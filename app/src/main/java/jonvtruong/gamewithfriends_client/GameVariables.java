@@ -49,6 +49,7 @@ public class GameVariables extends Application {
     }
 
     public void setNameList(HashMap<String,Integer> list){
+        list.put("bank", -1);
         nameList = list;
     }
 
