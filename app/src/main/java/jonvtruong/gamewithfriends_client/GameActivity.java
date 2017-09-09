@@ -22,6 +22,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -126,7 +127,15 @@ public class GameActivity extends AppCompatActivity {
         // create spinner to select player names
         List<String> names = new ArrayList<>(vars.getNameList().keySet());
         names.remove(vars.getName());
+        names.remove("bank");
+        Collections.sort(names);
+        //move bank to the beginning of list
+        names.add(0,"bank");
+
         Log.d("console", "removed name");
+
+
+
         ArrayAdapter adapter = new ArrayAdapter(this, android.R.layout.simple_spinner_item, names);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
