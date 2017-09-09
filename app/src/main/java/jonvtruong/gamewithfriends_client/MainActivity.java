@@ -7,15 +7,17 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.ConnectException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
 public class MainActivity extends AppCompatActivity {
-    static String HOST = "192.168.1.108";
-    static int PORT = 8888;
+    static String HOST = "123.123.1.1";
+    static int PORT = 8880;
     static String name;
 
     @Override
@@ -37,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     /** Asynchronous task to connect to game server, set up player, and start game **/
-    private class JoinGame extends AsyncTask<Void, Void, Void> {
+    private class JoinGame extends AsyncTask<Void, Void, Boolean> { // doInBackground's arguments, inprogress argument, return type of doInBackground + argument of onPost
         MainActivity act;
 
         JoinGame(MainActivity a){
@@ -45,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        protected Void doInBackground(Void... arg0) {
+        protected Boolean doInBackground(Void... arg0) { // return type
             try {
                 Log.d("console","trying to connect " + HOST + ":" + PORT);
                 Socket socket = new Socket(HOST, PORT);
@@ -70,21 +72,30 @@ public class MainActivity extends AppCompatActivity {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
                 Log.d("console","UnknownHostException: " + e.toString());
-            } catch (Exception e) {
+                return false;
+            }
+            catch (Exception e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
                 Log.d("console", "Exception: " + e.toString());
+                return false;
             }
 
-            return null; // sends this variable into the argument of onPostExecute
+            return true; // sends this variable into the argument of onPostExecute
         }
 
         @Override
-        protected void onPostExecute(Void result){ //creates a new activity to run the game
-            Intent intent = new Intent(act, GameActivity.class);
-            startActivity(intent);
-            Log.d("console","create new activity");
-            Log.d("console","--------------------");
+        protected void onPostExecute(Boolean result){ //creates a new activity to run the game
+            if(result) {
+                Intent intent = new Intent(act, GameActivity.class);
+                startActivity(intent);
+                Log.d("console", "create new activity");
+                Log.d("console", "--------------------");
+            }
+            else{
+                Toast toast = Toast.makeText(MainActivity.this, "Server not available", Toast.LENGTH_SHORT);
+                toast.show();
+            }
         }
     }
 }
