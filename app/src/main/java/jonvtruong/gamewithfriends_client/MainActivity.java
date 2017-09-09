@@ -33,8 +33,16 @@ public class MainActivity extends AppCompatActivity {
         Log.d("console","joining...");
         EditText editText = (EditText) findViewById(R.id.editText);
         name = editText.getText().toString().replaceAll("\\s",""); // gets the name entered from editText and removes any spaces
-        JoinGame j = new JoinGame(this);
-        j.execute();
+
+        if(!name.equals("")) {
+            JoinGame j = new JoinGame(this);
+            j.execute();
+        }
+
+        else{
+            Toast toast = Toast.makeText(this, "Enter your name", Toast.LENGTH_SHORT);
+            toast.show();
+        }
     }
 
 
