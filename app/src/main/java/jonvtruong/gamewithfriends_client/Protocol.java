@@ -26,7 +26,7 @@ class Protocol{
         String command = parse[0];
 
         switch(command) {
-            case("n"): //if creating new player, update player number and account starting balance
+            case("n"): //if creating new player, update player number and account starting balance, only occurs in mainactivity
                 int playerNum = Integer.parseInt(parse[1]);
                 int account = Integer.parseInt(parse[2]);
 
@@ -38,6 +38,7 @@ class Protocol{
             case("a"): //update personal account
                 vars.setAccount(Integer.parseInt(parse[1]));
                 Log.d("console", "account updated: " + vars.getAccount());
+                break;
 
             case("p"): //update player list
                 HashMap<String,Integer> list = new HashMap<>();

@@ -108,7 +108,7 @@ public class GameActivity extends AppCompatActivity {
     private void paymentDialog(int p){
         // 1. Instantiate an AlertDialog.Builder with its constructor
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-
+        final int pay = p;
         // 2. Chain together various setter methods to set the dialog characteristics
         builder.setMessage("Is this correct?")
                 .setTitle("Paying " + nameSelected + " $" + p);
@@ -118,7 +118,7 @@ public class GameActivity extends AppCompatActivity {
             // User clicks yes
             Log.d("console", "confirmed, paying");
             SendPayment s = new SendPayment();
-            s.execute(selectedPlayer, p);
+            s.execute(selectedPlayer, pay);
             }
         });
 
@@ -159,7 +159,9 @@ public class GameActivity extends AppCompatActivity {
         }
 
         @Override
-        protected void onPostExecute(Void result){ //creates a new activity to run the game
+        protected void onPostExecute(Void result){ //displays toast message after payment is sent to server, runs on UI thread
+            Toast toast = Toast.makeText(GameActivity.this, "Payment sent", Toast.LENGTH_SHORT);
+            toast.show();
         }
     }
 
@@ -187,9 +189,7 @@ public class GameActivity extends AppCompatActivity {
                     }
 
                     Log.d("console", message);
-                    String[] parse = Protocol.parseCommand(message); // get the parsed message
-
-                    handler.post(new runCommand(parse));
+                    handler.post(new runCommand(message));
 
                 } catch (UnknownHostException e) {
                     // TODO Auto-generated catch block
@@ -206,26 +206,28 @@ public class GameActivity extends AppCompatActivity {
         }
     }
 
-    private class runCommand implements Runnable{ //executes command in UI thread
+    /** executes command in UI thread **/
+    private class runCommand implements Runnable{
         String[] parse;
         String command;
+        String message;
 
-        runCommand(String[] p){
-            parse = p;
+        runCommand(String m){
+            message = m;
+            parse = Protocol.parseCommand(m);
             command = parse[0];
         }
 
         @Override
         public void run() {
             //get confirmation dialog for transactions (commands that are not new player added)
-            boolean needDialog = !(command.equals("p") || command.equals("n"));
-            if(needDialog) {
+            //boolean needDialog = !(command.equals("p") || command.equals("n"));
+            if(command.equals("t")) {
                 //show confirmation dialog
-                createDialog("Transaction received", "Is this correct?",0);
+                receiveDialog();
             }
 
-            if(confirmed || !needDialog){
-                Log.d("console","dialog confirmed");
+            else{
                 //execute command, update variables
                 Protocol.executeCommand(parse, vars);
                 //update UI with new variable
@@ -234,22 +236,93 @@ public class GameActivity extends AppCompatActivity {
 
         }
 
+        private void receiveDialog(){
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(GameActivity.this);
+
+            int fromNum = Integer.parseInt(parse[1]);
+
+            HashMap<String,Integer> list = vars.getNameList();
+            String fromName ="";
+
+            for(String key: list.keySet()) {
+                if(list.get(key).equals(fromNum)) {
+                    fromName = key;
+                }
+            }
+
+
+            builder.setMessage("Do you accept?")
+                    .setTitle(fromName + " wants to pay you $" + parse[3]);
+
+            builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    // User clicks yes
+                    message = message.replaceFirst("t","y");
+                    Log.d("console", "confirmed transaction: " + message);
+                    SendOK s = new SendOK();
+                    s.execute(message);
+                }
+            });
+
+            builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    // user clicks no
+
+                }
+            });
+            // 3. Get the AlertDialog from create()
+            AlertDialog dialog = builder.create();
+            dialog.show();
+        }
+
         private void updateUI(){
             switch(command){
                 case "p": // processes command: p (list of player names)
                     updateSpinner();
                     break;
-                case "t":
-                    updateAccountText();
-                    break;
+
                 case "a": // receives command: a new_account_value
                     updateAccountText();
+                    Log.d("console","displaying new account value");
                     break;
             }
         }
 
         private void updateAccountText(){
             accountText.setText(Integer.toString(vars.getAccount()));
+        }
+
+        /** Asynchronous task to send transaction confirmation **/
+        private class SendOK extends AsyncTask<String, Void, Void> {
+            @Override
+            protected Void doInBackground(String... arg) {
+                try {
+                    Log.d("console","sending payment");
+
+                    Socket socket = vars.getSocket();
+                    OutputStream outputStream = socket.getOutputStream();
+
+                    Protocol.send(outputStream, arg[0]); // sending confirmed transfer message: "y from to amount"
+
+                } catch (UnknownHostException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                    Log.d("console","UnknownHostException: " + e.toString());
+                } catch (Exception e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                    Log.d("console", "Exception: " + e.toString());
+                }
+
+                return null; // sends this variable into the argument of onPostExecute
+            }
+
+            @Override
+            protected void onPostExecute(Void result){ //displays toast message after payment is confirmed, runs on UI thread
+                Toast toast = Toast.makeText(GameActivity.this, "Payment received", Toast.LENGTH_SHORT);
+                toast.show();
+            }
         }
     }
 }
